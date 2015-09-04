@@ -2,6 +2,7 @@ require_relative 'p02_hashing'
 require_relative 'p04_linked_list'
 
 class HashMap
+  include Enumerable
   attr_reader :count
 
   def initialize(num_buckets = 8)
@@ -10,27 +11,39 @@ class HashMap
   end
 
   def include?(key)
+    @store[key.hash % num_buckets].include?(key)
   end
 
   def set(key, val)
+    @store[key.hash % num_buckets].insert(key, val)
+    @count += 1
+    resize! if num_buckets < @count
   end
 
   def get(key)
+    @store[key.hash % num_buckets].get(key)
   end
 
   def delete(key)
+    @store[key.hash % num_buckets].remove(key)
+    @count -= 1
   end
 
   def each
+    num_buckets.times do |bucket_num|
+      @store[bucket_num].each do |link|
+        yield(link.key, link.val)
+      end
+    end
   end
 
   # uncomment when you have Enumerable included
-  # def to_s
-  #   pairs = inject([]) do |strs, (k, v)|
-  #     strs << "#{k.to_s} => #{v.to_s}"
-  #   end
-  #   "{\n" + pairs.join(",\n") + "\n}"
-  # end
+  def to_s
+    pairs = inject([]) do |strs, (k, v)|
+      strs << "#{k.to_s} => #{v.to_s}"
+    end
+    "{\n" + pairs.join(",\n") + "\n}"
+  end
 
   alias_method :[], :get
   alias_method :[]=, :set
@@ -42,6 +55,13 @@ class HashMap
   end
 
   def resize!
+    new_store = Array.new(num_buckets * 2) { LinkedList.new }
+
+    self.each do |key, val|
+      new_store[key.hash % (num_buckets * 2)].insert(key, val)
+    end
+
+    @store = new_store
   end
 
   def bucket(key)
